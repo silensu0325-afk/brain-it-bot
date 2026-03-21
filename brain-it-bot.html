@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BRAIN IT スペシャリストチーム</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #060a14; font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+    textarea::placeholder { color: rgba(255,255,255,0.22); }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+    .sugg-btn:hover { background: rgba(0,200,255,0.15) !important; color: #fff !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    const SPECIALISTS = [
+      {
+        id:"coach", name:"学習コーチ", role:"カリキュラム・学習の進め方", emoji:"🎯",
+        color:"#00c2ff", glow:"rgba(0,194,255,0.35)", accent:"rgba(0,194,255,0.12)", border:"rgba(0,194,255,0.3)", category:"学習",
+        welcome:"こんにちは！学習コーチです📚\nカリキュラムの進め方や勉強の計画について何でも聞いてください！",
+        suggestions:["どのフェーズから始めればいい？","資格はどの順番で取るべき？","Phase 1で何を学ぶの？","ポートフォリオって何を作ればいい？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「学習コーチ」AIです。障害をお持ちの利用者が安心して学習を進められるよう、親切・丁寧・わかりやすくサポートしてください。
+カリキュラム: Phase 0（PC基礎）→Phase 1（AI資格: 生成AIパスポート→ITパスポート→G検定→DS検定）→Phase 2（MOS: Word/Excel/PowerPoint）→Phase 3（ポートフォリオ）
+回答ルール: 短く・わかりやすく。専門用語に説明を添える。施設固有の詳細は「スタッフに確認を」。常に前向きに。敬語で丁寧に。`,
+      },
+      {
+        id:"html", name:"HTMLコーチ", role:"Webページの骨組み", emoji:"🌐",
+        color:"#ff6b35", glow:"rgba(255,107,53,0.35)", accent:"rgba(255,107,53,0.12)", border:"rgba(255,107,53,0.3)", category:"プログラミング",
+        welcome:"こんにちは！HTMLコーチです🌐\nWebページの作り方を一緒に学びましょう！",
+        suggestions:["HTMLって何？","タグってどういう意味？","見出しの書き方","画像を表示するには？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「HTML専門コーチ」AIです。初心者にHTMLをやさしく教えてください。専門用語は必ず日本語で説明。コードは短い例から。「なぜそう書くか」を先に説明。エラー対処法も一緒に教える。褒めながら進める。敬語で丁寧に。`,
+      },
+      {
+        id:"css", name:"CSSコーチ", role:"デザイン・見た目の装飾", emoji:"🎨",
+        color:"#a855f7", glow:"rgba(168,85,247,0.35)", accent:"rgba(168,85,247,0.12)", border:"rgba(168,85,247,0.3)", category:"プログラミング",
+        welcome:"こんにちは！CSSコーチです🎨\nWebページをきれいに飾る方法を教えます！",
+        suggestions:["CSSって何？","文字の色を変えたい","背景色の変え方","中央に配置するには？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「CSS専門コーチ」AIです。デザイン初心者にCSSをやさしく教えてください。視覚的な変化が実感できる例を優先。セレクタ・プロパティ・値の3つをわかりやすく説明。短いコード例を示してから説明。敬語で丁寧に。`,
+      },
+      {
+        id:"javascript", name:"JavaScriptコーチ", role:"Webページに動きをつける", emoji:"⚡",
+        color:"#ffd700", glow:"rgba(255,215,0,0.35)", accent:"rgba(255,215,0,0.12)", border:"rgba(255,215,0,0.3)", category:"プログラミング",
+        welcome:"こんにちは！JavaScriptコーチです⚡\nWebページに動きをつける方法を教えます！",
+        suggestions:["JavaScriptって何？","ボタンをクリックしたら動かすには？","変数って何？","エラーが出たときどうすれば？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「JavaScript専門コーチ」AIです。初心者にJavaScriptをやさしく教えてください。「動く」体験を最優先。すぐ試せる短いコード例を見せる。変数・関数・イベントは身近な例えで説明。エラーメッセージの読み方も教える。敬語で丁寧に。`,
+      },
+      {
+        id:"php", name:"PHPコーチ", role:"サーバーサイドプログラミング", emoji:"🐘",
+        color:"#8892bf", glow:"rgba(136,146,191,0.35)", accent:"rgba(136,146,191,0.12)", border:"rgba(136,146,191,0.3)", category:"プログラミング",
+        welcome:"こんにちは！PHPコーチです🐘\nWebサイトの裏側の仕組みを作る方法を教えます！",
+        suggestions:["PHPって何？","HTMLとPHPの違いは？","変数の書き方","echoって何？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「PHP専門コーチ」AIです。初心者にPHPをやさしく教えてください。PHPはサーバーで動く言語であることを最初に説明。<?php ?>タグの意味から丁寧に。echoで出力・変数は$から始まるなど基礎を確実に。敬語で丁寧に。`,
+      },
+      {
+        id:"unity", name:"Unityコーチ", role:"ゲーム・3Dコンテンツ制作", emoji:"🎮",
+        color:"#00e5ff", glow:"rgba(0,229,255,0.35)", accent:"rgba(0,229,255,0.12)", border:"rgba(0,229,255,0.3)", category:"クリエイティブ",
+        welcome:"こんにちは！Unityコーチです🎮\nゲームや3Dコンテンツの作り方を一緒に学びましょう！",
+        suggestions:["Unityって何ができるの？","オブジェクトを動かすには？","シーンとは何？","C#って必要？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「Unity専門コーチ」AIです。初心者にUnityをやさしく教えてください。エディタの画面構成から説明。ゲームオブジェクト・コンポーネントの概念を身近な例えで。C#は最小限のコードから。小さな達成感を大切に。敬語で丁寧に。`,
+      },
+      {
+        id:"photoshop", name:"Photoshopコーチ", role:"画像編集・加工", emoji:"🖼️",
+        color:"#31a8ff", glow:"rgba(49,168,255,0.35)", accent:"rgba(49,168,255,0.12)", border:"rgba(49,168,255,0.3)", category:"クリエイティブ",
+        welcome:"こんにちは！Photoshopコーチです🖼️\n写真の加工や画像編集の方法を教えます！",
+        suggestions:["レイヤーって何？","画像の切り抜き方","背景を白くするには？","ファイルの保存形式は？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「Photoshop専門コーチ」AIです。初心者にPhotoshopをやさしく教えてください。レイヤーの概念を最初に丁寧に説明（透明なフィルムを重ねるイメージ）。非破壊編集の考え方を早めに伝える。保存形式の使い分けを説明。敬語で丁寧に。`,
+      },
+      {
+        id:"illustrator", name:"Illustratorコーチ", role:"ロゴ・イラスト・ベクター制作", emoji:"✏️",
+        color:"#ff9a00", glow:"rgba(255,154,0,0.35)", accent:"rgba(255,154,0,0.12)", border:"rgba(255,154,0,0.3)", category:"クリエイティブ",
+        welcome:"こんにちは！Illustratorコーチです✏️\nロゴやイラストの作り方を教えます！",
+        suggestions:["IllustratorとPhotoshopの違いは？","ベクターって何？","図形の描き方","ペンツールの使い方"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「Illustrator専門コーチ」AIです。初心者にIllustratorをやさしく教えてください。ベクターとラスターの違いを最初に説明。アートボード・パス・アンカーポイントの概念を言葉で伝える。図形ツール→ペンツールの順で段階的に。敬語で丁寧に。`,
+      },
+      {
+        id:"blender", name:"Blenderコーチ", role:"3Dモデリング・アニメーション", emoji:"🫐",
+        color:"#ea7600", glow:"rgba(234,118,0,0.35)", accent:"rgba(234,118,0,0.12)", border:"rgba(234,118,0,0.3)", category:"クリエイティブ",
+        welcome:"こんにちは！Blenderコーチです🫐\n3Dモデリングやアニメーションの作り方を教えます！",
+        suggestions:["Blenderって何ができるの？","画面操作の基本を教えて","オブジェクトの移動・回転・拡大","レンダリングって何？"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「Blender専門コーチ」AIです。3D初心者にBlenderをやさしく教えてください。ビューポート操作から説明。G・R・Sのショートカットを早めに教える。オブジェクトモードと編集モードの違いを丁寧に。シンプルな形の変形から始める。敬語で丁寧に。`,
+      },
+      {
+        id:"premiere", name:"Premiereコーチ", role:"動画編集・映像制作", emoji:"🎬",
+        color:"#9999ff", glow:"rgba(153,153,255,0.35)", accent:"rgba(153,153,255,0.12)", border:"rgba(153,153,255,0.3)", category:"クリエイティブ",
+        welcome:"こんにちは！Premiere Proコーチです🎬\n動画編集の方法を教えます！",
+        suggestions:["動画のカット編集","テロップの入れ方","BGMを入れるには？","書き出し方法"],
+        system:`あなたはBRAIN ITトレーニングセンター郡山の「Premiere Pro専門コーチ」AIです。動画編集初心者にやさしく教えてください。プロジェクトパネル・タイムライン・モニターの画面構成から説明。素材読み込み→配置→カット→書き出しの基本フローを最初に伝える。敬語で丁寧に。`,
+      },
+    ];
+
+    const TRIAGE_SYSTEM = `あなたはBRAIN ITトレーニングセンター郡山の「AIナビゲーター」です。
+利用者の質問を読んで、最適な専門家を1人だけ選んでください。
+専門家: coach(学習・カリキュラム・資格), html(HTML・タグ・Webページ構造), css(CSS・デザイン・色・レイアウト), javascript(JavaScript・動き・JS), php(PHP・サーバー・フォーム), unity(Unity・ゲーム・3Dゲーム), photoshop(Photoshop・写真編集・画像加工), illustrator(Illustrator・ロゴ・ベクター), blender(Blender・3Dモデリング・CG), premiere(Premiere Pro・動画編集・カット・テロップ)
+必ず以下のJSON形式のみで返答（他の文字は一切含めない）:
+{"specialist":"[id]","greeting":"[利用者への一言。やさしく・ですます調。例：HTMLのご質問ですね！HTMLコーチにつなぎます😊]"}`;
+
+    const CATEGORIES = ["すべて","学習","プログラミング","クリエイティブ"];
+
+    // ===== ChatWindow =====
+    function ChatWindow({ specialist, initialMessage }) {
+      const [messages, setMessages] = useState(() => {
+        const base = [{ id:"welcome", role:"assistant", text:specialist.welcome }];
+        if (initialMessage) base.push({ id:"init-user", role:"user", text:initialMessage });
+        return base;
+      });
+      const [input, setInput] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [showSugg, setShowSugg] = useState(!initialMessage);
+      const bottomRef = useRef(null);
+      const inputRef = useRef(null);
+      const didAuto = useRef(false);
+
+      useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, loading]);
+      useEffect(() => { inputRef.current?.focus(); }, [specialist.id]);
+      useEffect(() => {
+        if (initialMessage && !didAuto.current) { didAuto.current = true; autoSend(initialMessage); }
+      }, []);
+
+      const callAPI = async (msgs) => {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, system:specialist.system, messages:msgs }),
+        });
+        const data = await res.json();
+        return data.content?.find(b => b.type==="text")?.text || "うまく答えられませんでした。スタッフに確認してください。";
+      };
+
+      const autoSend = async (text) => {
+        setLoading(true);
+        try {
+          const reply = await callAPI([{ role:"user", content:text }]);
+          setMessages(p => [...p, { id:Date.now(), role:"assistant", text:reply }]);
+        } catch { setMessages(p => [...p, { id:Date.now(), role:"assistant", text:"エラーが発生しました。スタッフに声をかけてください。" }]); }
+        finally { setLoading(false); }
+      };
+
+      const send = async (text) => {
+        const t = text || input.trim();
+        if (!t || loading) return;
+        setInput(""); setShowSugg(false);
+        const next = [...messages, { id:Date.now(), role:"user", text:t }];
+        setMessages(next); setLoading(true);
+        try {
+          const apiMsgs = next.filter(m => !["welcome","init-user"].includes(m.id)).map(m => ({ role:m.role==="user"?"user":"assistant", content:m.text }));
+          const reply = await callAPI(apiMsgs);
+          setMessages(p => [...p, { id:Date.now()+1, role:"assistant", text:reply }]);
+        } catch { setMessages(p => [...p, { id:Date.now()+1, role:"assistant", text:"エラーが発生しました。スタッフに声をかけてください。" }]); }
+        finally { setLoading(false); }
+      };
+
+      const fmt = (text) => text.split("\n").map((l,i,a) => React.createElement(React.Fragment, {key:i}, l, i<a.length-1 && React.createElement("br")));
+      const c = specialist.color;
+
+      return React.createElement("div", { style:{display:"flex",flexDirection:"column",height:"100%"} },
+        React.createElement("div", { style:{flex:1,overflowY:"auto",padding:"18px 16px",display:"flex",flexDirection:"column",gap:"13px",scrollbarWidth:"thin"} },
+          messages.map(msg =>
+            React.createElement("div", { key:msg.id, style:{display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start",alignItems:"flex-end",gap:"8px"} },
+              msg.role==="assistant" && React.createElement("div", { style:{width:"28px",height:"28px",borderRadius:"8px",flexShrink:0,background:`linear-gradient(135deg,${c}66,${c}33)`,border:`1px solid ${c}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",boxShadow:`0 0 8px ${specialist.glow}`} }, specialist.emoji),
+              React.createElement("div", { style:{maxWidth:"77%",background:msg.role==="user"?`linear-gradient(135deg,${c}cc,${c}99)`:"rgba(255,255,255,0.06)",border:msg.role==="user"?"none":"1px solid rgba(255,255,255,0.08)",borderRadius:msg.role==="user"?"15px 15px 3px 15px":"15px 15px 15px 3px",padding:"10px 14px",color:"#eef2ff",fontSize:"13px",lineHeight:"1.75",boxShadow:msg.role==="user"?`0 3px 12px ${specialist.glow}`:"0 2px 8px rgba(0,0,0,0.2)"} }, fmt(msg.text))
+            )
+          ),
+          loading && React.createElement("div", { style:{display:"flex",alignItems:"flex-end",gap:"8px"} },
+            React.createElement("div", { style:{width:"28px",height:"28px",borderRadius:"8px",background:`linear-gradient(135deg,${c}66,${c}33)`,border:`1px solid ${c}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px"} }, specialist.emoji),
+            React.createElement("div", { style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"15px 15px 15px 3px",padding:"12px 15px",display:"flex",gap:"4px",alignItems:"center"} },
+              [0,1,2].map(i => React.createElement("div", { key:i, style:{width:"6px",height:"6px",borderRadius:"50%",background:c,animation:`bounce 1.2s ease-in-out ${i*0.2}s infinite`} }))
+            )
+          ),
+          React.createElement("div", { ref:bottomRef })
+        ),
+        showSugg && React.createElement("div", { style:{padding:"0 16px 10px",display:"flex",flexWrap:"wrap",gap:"6px"} },
+          specialist.suggestions.map(s =>
+            React.createElement("button", { key:s, onClick:()=>send(s), style:{background:specialist.accent,border:`1px solid ${specialist.border}`,borderRadius:"16px",padding:"5px 11px",color:c,fontSize:"11px",cursor:"pointer",transition:"all 0.18s",whiteSpace:"nowrap"} }, s)
+          )
+        ),
+        React.createElement("div", { style:{padding:"13px 16px",borderTop:"1px solid rgba(255,255,255,0.05)",background:"rgba(0,0,0,0.15)",display:"flex",gap:"8px",alignItems:"flex-end"} },
+          React.createElement("textarea", { ref:inputRef, value:input, onChange:e=>setInput(e.target.value), onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}, placeholder:`${specialist.name}に質問する...`, rows:1, style:{flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"11px",padding:"10px 13px",color:"#eef2ff",fontSize:"13px",resize:"none",outline:"none",fontFamily:"inherit",lineHeight:"1.5",maxHeight:"80px",overflowY:"auto",transition:"border-color 0.2s"}, onFocus:e=>e.target.style.borderColor=`${c}77`, onBlur:e=>e.target.style.borderColor="rgba(255,255,255,0.1)" }),
+          React.createElement("button", { onClick:()=>send(), disabled:!input.trim()||loading, style:{width:"40px",height:"40px",borderRadius:"10px",background:input.trim()&&!loading?`linear-gradient(135deg,${c},${c}aa)`:"rgba(255,255,255,0.07)",border:"none",cursor:input.trim()&&!loading?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",transition:"all 0.2s",flexShrink:0,color:"#fff",boxShadow:input.trim()&&!loading?`0 4px 12px ${specialist.glow}`:"none"} }, loading?"⏳":"↑")
+        )
+      );
+    }
+
+    // ===== TriageWindow =====
+    function TriageWindow({ onRoute }) {
+      const [input, setInput] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [status, setStatus] = useState("");
+      const inputRef = useRef(null);
+      useEffect(() => { inputRef.current?.focus(); }, []);
+
+      const QUICK = ["HTMLのタグがわからない","CSSで色を変えたい","動画をカットしたい","Unityでオブジェクトが動かない","資格の勉強順を教えて","Blenderの操作がわからない"];
+
+      const triage = async () => {
+        const t = input.trim();
+        if (!t || loading) return;
+        setLoading(true); setStatus("質問を分析中...");
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200, system:TRIAGE_SYSTEM, messages:[{role:"user",content:t}] }),
+          });
+          const data = await res.json();
+          const raw = data.content?.find(b=>b.type==="text")?.text || "{}";
+          const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
+          const sp = SPECIALISTS.find(s=>s.id===parsed.specialist) || SPECIALISTS[0];
+          setStatus(`${sp.emoji} ${parsed.greeting || sp.name+"につなぎます！"}`);
+          await new Promise(r=>setTimeout(r,1400));
+          onRoute(sp.id, t);
+        } catch {
+          setStatus("うまく判断できませんでした。専門家を直接選んでみてください。");
+          setLoading(false);
+        }
+      };
+
+      return React.createElement("div", { style:{display:"flex",flexDirection:"column",height:"100%",justifyContent:"center",alignItems:"center",padding:"28px 24px",gap:"20px"} },
+        React.createElement("div", { style:{textAlign:"center"} },
+          React.createElement("div", { style:{fontSize:"48px",marginBottom:"8px",filter:"drop-shadow(0 0 20px rgba(0,200,255,0.5))"} }, "🤖"),
+          React.createElement("div", { style:{color:"#fff",fontSize:"16px",fontWeight:"700",letterSpacing:"0.03em"} }, "何でも聞いてください"),
+          React.createElement("div", { style:{color:"rgba(255,255,255,0.35)",fontSize:"12px",marginTop:"4px"} }, "最適な専門家に自動でつなぎます")
+        ),
+        React.createElement("div", { style:{display:"flex",flexWrap:"wrap",gap:"7px",justifyContent:"center",maxWidth:"500px"} },
+          QUICK.map(q => React.createElement("button", { key:q, onClick:()=>setInput(q), style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px",padding:"6px 13px",color:"rgba(255,255,255,0.55)",fontSize:"11.5px",cursor:"pointer",transition:"all 0.18s"} }, q))
+        ),
+        status && React.createElement("div", { style:{background:"rgba(0,200,255,0.1)",border:"1px solid rgba(0,200,255,0.25)",borderRadius:"12px",padding:"10px 18px",color:"#00c8ff",fontSize:"13px",textAlign:"center",maxWidth:"400px"} },
+          loading && React.createElement("span", { style:{marginRight:"8px"} }, "⏳"), status
+        ),
+        React.createElement("div", { style:{width:"100%",maxWidth:"500px",display:"flex",gap:"8px",alignItems:"flex-end"} },
+          React.createElement("textarea", { ref:inputRef, value:input, onChange:e=>setInput(e.target.value), onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();triage();}}, placeholder:"例：HTMLでリンクを作りたいけどわからない...", rows:2, style:{flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"14px",padding:"12px 15px",color:"#eef2ff",fontSize:"13.5px",resize:"none",outline:"none",fontFamily:"inherit",lineHeight:"1.6",transition:"border-color 0.2s"}, onFocus:e=>e.target.style.borderColor="rgba(0,200,255,0.5)", onBlur:e=>e.target.style.borderColor="rgba(255,255,255,0.12)" }),
+          React.createElement("button", { onClick:triage, disabled:!input.trim()||loading, style:{width:"48px",height:"48px",borderRadius:"13px",background:input.trim()&&!loading?"linear-gradient(135deg,#00c2ff,#0055ff)":"rgba(255,255,255,0.07)",border:"none",cursor:input.trim()&&!loading?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",color:"#fff",flexShrink:0,boxShadow:input.trim()&&!loading?"0 4px 16px rgba(0,150,255,0.4)":"none",transition:"all 0.2s"} }, loading?"⏳":"↑")
+        )
+      );
+    }
+
+    // ===== App =====
+    function App() {
+      const [activeId, setActiveId] = useState("__triage__");
+      const [category, setCategory] = useState("すべて");
+      const [routeState, setRouteState] = useState({});
+
+      const handleRoute = (spId, question) => {
+        setRouteState(p => ({...p, [spId]:question}));
+        setActiveId(spId);
+      };
+
+      const active = SPECIALISTS.find(s=>s.id===activeId);
+      const filtered = category==="すべて" ? SPECIALISTS : SPECIALISTS.filter(s=>s.category===category);
+
+      return React.createElement("div", { style:{minHeight:"100vh",background:"linear-gradient(160deg,#060a14 0%,#0b1428 55%,#080e20 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",padding:"16px"} },
+        // Header
+        React.createElement("div", { style:{width:"100%",maxWidth:"760px",marginBottom:"12px"} },
+          React.createElement("div", { style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"} },
+            React.createElement("div", { style:{width:"38px",height:"38px",borderRadius:"10px",background:"linear-gradient(135deg,#00c2ff,#0055ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"19px",boxShadow:"0 0 16px rgba(0,160,255,0.35)",flexShrink:0} }, "🧠"),
+            React.createElement("div", null,
+              React.createElement("div", { style:{color:"#fff",fontWeight:"700",fontSize:"14px"} }, "BRAIN IT スペシャリストチーム"),
+              React.createElement("div", { style:{color:"rgba(255,255,255,0.35)",fontSize:"11px"} }, `専門家を選ぶか、そのまま質問してください • ${SPECIALISTS.length}人対応中`)
+            )
+          ),
+          React.createElement("div", { style:{display:"flex",gap:"6px",marginBottom:"10px"} },
+            CATEGORIES.map(cat => React.createElement("button", { key:cat, onClick:()=>setCategory(cat), style:{padding:"4px 12px",borderRadius:"20px",border:category===cat?"1px solid rgba(255,255,255,0.3)":"1px solid rgba(255,255,255,0.08)",background:category===cat?"rgba(255,255,255,0.1)":"transparent",color:category===cat?"#fff":"rgba(255,255,255,0.35)",fontSize:"11px",cursor:"pointer",transition:"all 0.2s"} }, cat))
+          ),
+          React.createElement("div", { style:{display:"flex",flexWrap:"wrap",gap:"7px"} },
+            // Triage tab
+            React.createElement("button", { onClick:()=>setActiveId("__triage__"), style:{display:"flex",alignItems:"center",gap:"7px",padding:"8px 14px",borderRadius:"12px",background:activeId==="__triage__"?"linear-gradient(135deg,rgba(0,200,255,0.18),rgba(0,200,255,0.08))":"rgba(255,255,255,0.03)",border:activeId==="__triage__"?"1.5px solid rgba(0,200,255,0.45)":"1.5px solid rgba(255,255,255,0.07)",cursor:"pointer",transition:"all 0.2s",boxShadow:activeId==="__triage__"?"0 0 14px rgba(0,200,255,0.25)":"none"} },
+              React.createElement("span", { style:{fontSize:"16px"} }, "🤖"),
+              React.createElement("div", { style:{textAlign:"left"} },
+                React.createElement("div", { style:{color:activeId==="__triage__"?"#00c8ff":"rgba(255,255,255,0.55)",fontSize:"12px",fontWeight:activeId==="__triage__"?"700":"500",whiteSpace:"nowrap"} }, "自動で振り分け"),
+                React.createElement("div", { style:{color:"rgba(255,255,255,0.25)",fontSize:"9.5px",whiteSpace:"nowrap"} }, "まずここから")
+              ),
+              activeId==="__triage__" && React.createElement("div", { style:{width:"6px",height:"6px",borderRadius:"50%",background:"#00c8ff",marginLeft:"2px",boxShadow:"0 0 6px #00c8ff",animation:"pulse 2s ease-in-out infinite"} })
+            ),
+            // Specialist tabs
+            filtered.map(s => {
+              const isActive = s.id===activeId;
+              return React.createElement("button", { key:s.id, onClick:()=>setActiveId(s.id), style:{display:"flex",alignItems:"center",gap:"7px",padding:"8px 14px",borderRadius:"12px",background:isActive?`linear-gradient(135deg,${s.color}20,${s.color}0d)`:"rgba(255,255,255,0.03)",border:isActive?`1.5px solid ${s.color}55`:"1.5px solid rgba(255,255,255,0.07)",cursor:"pointer",transition:"all 0.2s",boxShadow:isActive?`0 0 14px ${s.glow}`:"none"} },
+                React.createElement("span", { style:{fontSize:"16px"} }, s.emoji),
+                React.createElement("div", { style:{textAlign:"left"} },
+                  React.createElement("div", { style:{color:isActive?s.color:"rgba(255,255,255,0.55)",fontSize:"12px",fontWeight:isActive?"700":"500",whiteSpace:"nowrap"} }, s.name),
+                  React.createElement("div", { style:{color:"rgba(255,255,255,0.25)",fontSize:"9.5px",whiteSpace:"nowrap"} }, s.role)
+                ),
+                isActive && React.createElement("div", { style:{width:"6px",height:"6px",borderRadius:"50%",background:s.color,marginLeft:"2px",boxShadow:`0 0 6px ${s.color}`,animation:"pulse 2s ease-in-out infinite"} })
+              );
+            })
+          )
+        ),
+        // Chat area
+        React.createElement("div", { style:{width:"100%",maxWidth:"760px",height:"490px",background:"rgba(255,255,255,0.025)",border:`1px solid ${active?active.color+"22":"rgba(0,200,255,0.15)"}`,borderRadius:"18px",overflow:"hidden",boxShadow:"0 20px 70px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)",display:"flex",flexDirection:"column",transition:"border-color 0.3s"} },
+          React.createElement("div", { style:{padding:"12px 16px",borderBottom:`1px solid ${active?active.color+"18":"rgba(0,200,255,0.1)"}`,background:active?`linear-gradient(90deg,${active.color}0a,transparent)`:"linear-gradient(90deg,rgba(0,200,255,0.05),transparent)",display:"flex",alignItems:"center",gap:"9px"} },
+            React.createElement("span", { style:{fontSize:"18px"} }, active?active.emoji:"🤖"),
+            React.createElement("div", null,
+              React.createElement("span", { style:{color:active?active.color:"#00c8ff",fontWeight:"700",fontSize:"13px"} }, active?active.name:"AIナビゲーター"),
+              React.createElement("span", { style:{color:"rgba(255,255,255,0.28)",fontSize:"11px",marginLeft:"8px"} }, active?active.role:"質問を分析して最適な専門家につなぎます")
+            ),
+            React.createElement("div", { style:{marginLeft:"auto",display:"flex",alignItems:"center",gap:"5px",background:"rgba(0,255,120,0.08)",border:"1px solid rgba(0,255,120,0.2)",borderRadius:"20px",padding:"3px 9px"} },
+              React.createElement("div", { style:{width:"5px",height:"5px",borderRadius:"50%",background:"#00ff78",boxShadow:"0 0 6px #00ff78",animation:"pulse 2s ease-in-out infinite"} }),
+              React.createElement("span", { style:{color:"#00ff78",fontSize:"10px",fontWeight:"600"} }, "対応中")
+            )
+          ),
+          activeId==="__triage__"
+            ? React.createElement(TriageWindow, { onRoute:handleRoute })
+            : React.createElement(ChatWindow, { key:`${active.id}-${routeState[active.id]||""}`, specialist:active, initialMessage:routeState[active.id] })
+        ),
+        React.createElement("div", { style:{marginTop:"10px",color:"rgba(255,255,255,0.13)",fontSize:"10px",textAlign:"center"} }, "スタッフへの相談はいつでもどうぞ ✦ Powered by Claude AI")
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
