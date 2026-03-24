@@ -224,12 +224,21 @@ function renderChat() {
   }).join('');
   area.scrollTop = area.scrollHeight;
 }
-function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
 function formatMessage(t) {
-  t = t.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-  t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+  const codeBlocks = [];
+  t = t.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
+    codeBlocks.push('<pre><code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>');
+    return '%%CODEBLOCK' + (codeBlocks.length - 1) + '%%';
+  });
+  const inlineCodes = [];
+  t = t.replace(/`([^`]+)`/g, function(m, code) {
+    inlineCodes.push('<code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code>');
+    return '%%INLINE' + (inlineCodes.length - 1) + '%%';
+  });
   t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   t = t.replace(/\n/g, '<br>');
+  codeBlocks.forEach(function(block, i) { t = t.replace('%%CODEBLOCK' + i + '%%', block); });
+  inlineCodes.forEach(function(code, i) { t = t.replace('%%INLINE' + i + '%%', code); });
   return t;
 }
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
