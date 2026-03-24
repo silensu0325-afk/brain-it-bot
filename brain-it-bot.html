@@ -174,65 +174,58 @@ body {
   <div class="input-hint">Enter で送信 ／ Shift+Enter で改行</div>
 </div>
 <script>
-const WORKER_URL = "https://brain-it-proxy.silensu0325.workers.dev";
-const SPECIALISTS = {
+var WORKER_URL = "https://brain-it-proxy.silensu0325.workers.dev";
+
+var SPECIALISTS = {
   navi: { name: "AIナビゲーター", icon: "🧭", system: "あなたはBRAIN ITトレーニングセンター郡山のAIナビゲーターです。利用者の質問を分析し、最適なスペシャリストに振り分ける役割です。\n\n以下のスペシャリストがいます：\n- coach: 学習コーチ（勉強法、モチベーション、学習計画）\n- html: HTML専門家\n- css: CSS専門家\n- js: JavaScript専門家\n- php: PHP専門家\n- unity: Unity専門家（C#、ゲーム開発）\n- ps: Photoshop専門家\n- ai: Illustrator専門家\n- blender: Blender専門家（3Dモデリング）\n- premiere: Premiere Pro専門家（動画編集）\n\nユーザーの質問に対して、まず以下のJSON形式で振り分け先を回答してください：\n{\"route\": \"スペシャリストID\", \"reason\": \"振り分け理由（1文）\"}\n\nその後、改行して簡潔な挨拶を追加してください。一般的な雑談や挨拶にはrouteを\"navi\"にして自分で応答してください。" },
   coach: { name: "学習コーチ", icon: "📚", system: "あなたはBRAIN ITトレーニングセンター郡山の学習コーチです。利用者のIT学習をサポートします。やさしく励ましつつ具体的なアクションを提案。「まずこれをやってみよう」という1ステップを必ず含める。専門用語は噛み砕いて説明。200字程度を目安に簡潔に。" },
-  html: { name: "HTML専門家", icon: "🌐", system: "あなたはBRAIN ITトレーニングセンター郡山のHTML専門家です。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。初心者向けの言葉で。" },
-  css: { name: "CSS専門家", icon: "🎨", system: "あなたはBRAIN ITトレーニングセンター郡山のCSS専門家です。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。初心者向けの言葉で。" },
-  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはBRAIN ITトレーニングセンター郡山のJavaScript専門家です。コード例を積極的に示す。モダンな書き方を推奨。初心者向けの言葉で。" },
-  php: { name: "PHP専門家", icon: "🐘", system: "あなたはBRAIN ITトレーニングセンター郡山のPHP専門家です。コード例を積極的に示す。セキュリティにも触れる。初心者向けの言葉で。" },
-  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはBRAIN ITトレーニングセンター郡山のUnity専門家です。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。初心者向けの言葉で。" },
+  html: { name: "HTML専門家", icon: "🌐", system: "あなたはBRAIN ITトレーニングセンター郡山のHTML専門家です。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
+  css: { name: "CSS専門家", icon: "🎨", system: "あなたはBRAIN ITトレーニングセンター郡山のCSS専門家です。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
+  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはBRAIN ITトレーニングセンター郡山のJavaScript専門家です。コード例を積極的に示す。モダンな書き方を推奨。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
+  php: { name: "PHP専門家", icon: "🐘", system: "あなたはBRAIN ITトレーニングセンター郡山のPHP専門家です。コード例を積極的に示す。セキュリティにも触れる。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
+  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはBRAIN ITトレーニングセンター郡山のUnity専門家です。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
   ps: { name: "Photoshop専門家", icon: "🖼️", system: "あなたはBRAIN ITトレーニングセンター郡山のPhotoshop専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" },
   ai: { name: "Illustrator専門家", icon: "✏️", system: "あなたはBRAIN ITトレーニングセンター郡山のIllustrator専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" },
   blender: { name: "Blender専門家", icon: "🧊", system: "あなたはBRAIN ITトレーニングセンター郡山のBlender専門家です。操作手順をステップバイステップで。ショートカットキーを必ず併記。初心者向けの言葉で。" },
   premiere: { name: "Premiere Pro専門家", icon: "🎬", system: "あなたはBRAIN ITトレーニングセンター郡山のPremiere Pro専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" }
 };
-let currentTab = "navi";
-let chatHistories = {};
-let isGenerating = false;
-Object.keys(SPECIALISTS).forEach(id => { chatHistories[id] = []; });
+
+var currentTab = "navi";
+var chatHistories = {};
+var isGenerating = false;
+Object.keys(SPECIALISTS).forEach(function(id) { chatHistories[id] = []; });
 
 function filterTabs(cat) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.filter-btn[data-filter="${cat}"]`).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    const c = btn.dataset.cat;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.filter-btn[data-filter="' + cat + '"]').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    var c = btn.dataset.cat;
     btn.style.display = (cat === 'all' || c === cat || c === 'all') ? '' : 'none';
   });
 }
+
 function switchTab(id) {
   currentTab = id;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.tab-btn[data-id="${id}"]`).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.tab-btn[data-id="' + id + '"]').classList.add('active');
   renderChat();
 }
-function renderChat() {
-  const area = document.getElementById('chatArea');
-  const history = chatHistories[currentTab];
-  if (history.length === 0) {
-    const sp = SPECIALISTS[currentTab];
-    area.innerHTML = `<div class="welcome"><div class="welcome-icon">${sp.icon}</div><h2>${sp.name}</h2><p>${currentTab === 'navi' ? '質問を入力すると、最適なスペシャリストに自動で振り分けます。直接タブを選んでもOK。' : sp.name + 'に何でも聞いてください。初歩的な質問でも大歓迎です。'}</p>${currentTab === 'navi' ? '<div class="quick-btns"><button class="quick-btn" onclick="sendQuick(\'HTMLでリンクの貼り方がわからない\')">HTMLでリンクの貼り方</button><button class="quick-btn" onclick="sendQuick(\'CSSでボタンを中央に置きたい\')">CSSで中央配置</button><button class="quick-btn" onclick="sendQuick(\'勉強のモチベが上がらない\')">モチベが上がらない</button><button class="quick-btn" onclick="sendQuick(\'Blenderで3Dモデルを作りたい\')">Blender入門</button></div>' : ''}</div>`;
-    return;
-  }
-  area.innerHTML = history.map(msg => {
-    if (msg.role === 'user') {
-      return `<div class="msg user"><div class="msg-avatar">👤</div><div class="msg-body">${escapeHtml(msg.content)}</div></div>`;
-    }
-    const sp = SPECIALISTS[msg.specialist || currentTab];
-    return `<div class="msg bot"><div class="msg-avatar">${sp.icon}</div><div class="msg-body"><div class="msg-specialist">${sp.name}</div>${msg.route ? `<div class="route-badge">→ ${SPECIALISTS[msg.route].name}に転送</div>` : ''}${formatMessage(msg.content)}</div></div>`;
-  }).join('');
-  area.scrollTop = area.scrollHeight;
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
 }
+
 function formatMessage(t) {
-  const codeBlocks = [];
+  var codeBlocks = [];
   t = t.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
-    codeBlocks.push('<pre><code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>');
+    var escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    codeBlocks.push('<pre><code>' + escaped + '</code></pre>');
     return '%%CODEBLOCK' + (codeBlocks.length - 1) + '%%';
   });
-  const inlineCodes = [];
+  var inlineCodes = [];
   t = t.replace(/`([^`]+)`/g, function(m, code) {
-    inlineCodes.push('<code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code>');
+    var escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    inlineCodes.push('<code>' + escaped + '</code>');
     return '%%INLINE' + (inlineCodes.length - 1) + '%%';
   });
   t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -241,13 +234,43 @@ function formatMessage(t) {
   inlineCodes.forEach(function(code, i) { t = t.replace('%%INLINE' + i + '%%', code); });
   return t;
 }
+
+function renderChat() {
+  var area = document.getElementById('chatArea');
+  var history = chatHistories[currentTab];
+  if (history.length === 0) {
+    var sp = SPECIALISTS[currentTab];
+    var desc = currentTab === 'navi'
+      ? '質問を入力すると、最適なスペシャリストに自動で振り分けます。直接タブを選んでもOK。'
+      : sp.name + 'に何でも聞いてください。初歩的な質問でも大歓迎です。';
+    var quickHtml = currentTab === 'navi'
+      ? '<div class="quick-btns"><button class="quick-btn" onclick="sendQuick(\'HTMLでリンクの貼り方がわからない\')">HTMLでリンクの貼り方</button><button class="quick-btn" onclick="sendQuick(\'CSSでボタンを中央に置きたい\')">CSSで中央配置</button><button class="quick-btn" onclick="sendQuick(\'勉強のモチベが上がらない\')">モチベが上がらない</button><button class="quick-btn" onclick="sendQuick(\'Blenderで3Dモデルを作りたい\')">Blender入門</button></div>'
+      : '';
+    area.innerHTML = '<div class="welcome"><div class="welcome-icon">' + sp.icon + '</div><h2>' + sp.name + '</h2><p>' + desc + '</p>' + quickHtml + '</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < history.length; i++) {
+    var msg = history[i];
+    if (msg.role === 'user') {
+      html += '<div class="msg user"><div class="msg-avatar">👤</div><div class="msg-body">' + escapeHtml(msg.content) + '</div></div>';
+    } else {
+      var sp2 = SPECIALISTS[msg.specialist || currentTab];
+      var routeHtml = msg.route ? '<div class="route-badge">→ ' + SPECIALISTS[msg.route].name + 'に転送</div>' : '';
+      html += '<div class="msg bot"><div class="msg-avatar">' + sp2.icon + '</div><div class="msg-body"><div class="msg-specialist">' + sp2.name + '</div>' + routeHtml + formatMessage(msg.content) + '</div></div>';
+    }
+  }
+  area.innerHTML = html;
+  area.scrollTop = area.scrollHeight;
+}
+
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
 async function sendMessage() {
-  const input = document.getElementById('userInput');
-  const text = input.value.trim();
+  var input = document.getElementById('userInput');
+  var text = input.value.trim();
   if (!text || isGenerating) return;
   isGenerating = true;
   document.getElementById('sendBtn').disabled = true;
@@ -270,12 +293,16 @@ async function sendMessage() {
 }
 
 async function handleNaviRoute(text) {
-  const naviResponse = await callClaude('navi', [{ role: 'user', content: text }]);
+  var naviResponse = await callClaude('navi', [{ role: 'user', content: text }]);
   removeTyping();
-  let route = null, cleanResponse = naviResponse;
-  const jsonMatch = naviResponse.match(/\{[\s\S]*?"route"[\s\S]*?\}/);
+  var route = null;
+  var cleanResponse = naviResponse;
+  var jsonMatch = naviResponse.match(/\{[\s\S]*?"route"[\s\S]*?\}/);
   if (jsonMatch) {
-    try { const p = JSON.parse(jsonMatch[0]); if (p.route && SPECIALISTS[p.route]) route = p.route; } catch(e) {}
+    try {
+      var p = JSON.parse(jsonMatch[0]);
+      if (p.route && SPECIALISTS[p.route]) route = p.route;
+    } catch(e) {}
     cleanResponse = naviResponse.replace(jsonMatch[0], '').trim();
   }
   if (route && route !== 'navi') {
@@ -285,7 +312,7 @@ async function handleNaviRoute(text) {
     chatHistories[route].push({ role: 'user', content: text });
     renderChat();
     showTyping();
-    const sr = await callClaude(route, [{ role: 'user', content: text }]);
+    var sr = await callClaude(route, [{ role: 'user', content: text }]);
     removeTyping();
     chatHistories[route].push({ role: 'assistant', content: sr, specialist: route });
     renderChat();
@@ -296,36 +323,54 @@ async function handleNaviRoute(text) {
 }
 
 async function handleDirectChat(text, sid) {
-  const history = chatHistories[sid].filter(m => m.role === 'user' || (m.role === 'assistant' && m.specialist === sid)).slice(-10).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
-  const r = await callClaude(sid, history);
+  var hist = chatHistories[sid];
+  var messages = [];
+  var count = 0;
+  for (var i = hist.length - 1; i >= 0 && count < 10; i--) {
+    var m = hist[i];
+    if (m.role === 'user' || (m.role === 'assistant' && m.specialist === sid)) {
+      messages.unshift({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content });
+      count++;
+    }
+  }
+  var r = await callClaude(sid, messages);
   removeTyping();
   chatHistories[sid].push({ role: 'assistant', content: r, specialist: sid });
   renderChat();
 }
 
 async function callClaude(sid, messages) {
-  const sp = SPECIALISTS[sid];
-  const res = await fetch(WORKER_URL, {
+  var sp = SPECIALISTS[sid];
+  var res = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ system: sp.system, messages: messages })
   });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || 'HTTP ' + res.status); }
-  const data = await res.json();
+  if (!res.ok) {
+    var e = {};
+    try { e = await res.json(); } catch(x) {}
+    throw new Error(e.error ? e.error.message : 'HTTP ' + res.status);
+  }
+  var data = await res.json();
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  return data.content?.[0]?.text || "応答を取得できませんでした。";
+  return (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : "応答を取得できませんでした。";
 }
 
 function showTyping() {
-  const area = document.getElementById('chatArea');
-  const sp = SPECIALISTS[currentTab];
-  const d = document.createElement('div');
-  d.className = 'msg bot'; d.id = 'typingMsg';
-  d.innerHTML = `<div class="msg-avatar">${sp.icon}</div><div class="msg-body"><div class="msg-specialist">${sp.name}</div><div class="typing"><span></span><span></span><span></span></div></div>`;
+  var area = document.getElementById('chatArea');
+  var sp = SPECIALISTS[currentTab];
+  var d = document.createElement('div');
+  d.className = 'msg bot';
+  d.id = 'typingMsg';
+  d.innerHTML = '<div class="msg-avatar">' + sp.icon + '</div><div class="msg-body"><div class="msg-specialist">' + sp.name + '</div><div class="typing"><span></span><span></span><span></span></div></div>';
   area.appendChild(d);
   area.scrollTop = area.scrollHeight;
 }
-function removeTyping() { const el = document.getElementById('typingMsg'); if (el) el.remove(); }
+
+function removeTyping() {
+  var el = document.getElementById('typingMsg');
+  if (el) el.remove();
+}
 </script>
 </body>
 </html>
