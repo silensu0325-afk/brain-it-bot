@@ -87,6 +87,7 @@ body {
 .msg-body code { font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
 .msg-body pre { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; }
 .msg-specialist { font-size: 10px; color: var(--accent); font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+.msg-body img.user-image { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; }
 .typing { display: flex; gap: 4px; padding: 4px 0; }
 .typing span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1.2s infinite; }
 .typing span:nth-child(2) { animation-delay: 0.2s; }
@@ -112,6 +113,13 @@ body {
 }
 .input-row textarea:focus { border-color: var(--accent); }
 .input-row textarea::placeholder { color: var(--text-muted); }
+.img-btn {
+  width: 46px; height: 46px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text-dim); font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;
+}
+.img-btn:hover { border-color: var(--accent); color: var(--accent); }
+.img-btn.has-image { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .send-btn {
   width: 46px; height: 46px; background: var(--accent); border: none; border-radius: 12px;
   color: var(--bg); font-size: 20px; cursor: pointer;
@@ -120,6 +128,17 @@ body {
 .send-btn:hover { background: #00e6b8; transform: scale(1.05); }
 .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 .input-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; text-align: center; }
+.image-preview {
+  display: none; padding: 8px 16px 0; background: var(--surface);
+}
+.image-preview.show { display: flex; align-items: center; gap: 10px; }
+.image-preview img { height: 48px; border-radius: 6px; border: 1px solid var(--border); }
+.image-preview .preview-name { font-size: 11px; color: var(--text-dim); flex: 1; }
+.image-preview .preview-remove {
+  background: none; border: none; color: var(--text-muted); font-size: 18px;
+  cursor: pointer; padding: 4px 8px;
+}
+.image-preview .preview-remove:hover { color: #ff6b6b; }
 .route-badge { display: inline-block; background: var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin-bottom: 6px; }
 @media (max-width: 600px) { .header { padding: 10px 14px; } .msg { max-width: 95%; } .welcome { padding: 24px 14px; } }
 </style>
@@ -166,34 +185,64 @@ body {
     </div>
   </div>
 </div>
+<div class="image-preview" id="imagePreview">
+  <img id="previewImg" src="" alt="preview">
+  <span class="preview-name" id="previewName"></span>
+  <button class="preview-remove" onclick="removeImage()">✕</button>
+</div>
 <div class="input-area">
   <div class="input-row">
+    <button class="img-btn" id="imgBtn" onclick="document.getElementById('fileInput').click()" title="画像を添付">📷</button>
+    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" onchange="handleImageSelect(event)">
     <textarea id="userInput" rows="1" placeholder="質問を入力してください..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
   </div>
-  <div class="input-hint">Enter で送信 ／ Shift+Enter で改行</div>
+  <div class="input-hint">Enter で送信 ／ Shift+Enter で改行 ／ 📷 画像添付</div>
 </div>
 <script>
 var WORKER_URL = "https://brain-it-proxy.silensu0325.workers.dev";
+var pendingImage = null;
 
 var SPECIALISTS = {
-  navi: { name: "AIナビゲーター", icon: "🧭", system: "あなたはBRAIN ITトレーニングセンター郡山のAIナビゲーターです。利用者の質問を分析し、最適なスペシャリストに振り分ける役割です。\n\n以下のスペシャリストがいます：\n- coach: 学習コーチ（勉強法、モチベーション、学習計画）\n- html: HTML専門家\n- css: CSS専門家\n- js: JavaScript専門家\n- php: PHP専門家\n- unity: Unity専門家（C#、ゲーム開発）\n- ps: Photoshop専門家\n- ai: Illustrator専門家\n- blender: Blender専門家（3Dモデリング）\n- premiere: Premiere Pro専門家（動画編集）\n\nユーザーの質問に対して、まず以下のJSON形式で振り分け先を回答してください：\n{\"route\": \"スペシャリストID\", \"reason\": \"振り分け理由（1文）\"}\n\nその後、改行して簡潔な挨拶を追加してください。一般的な雑談や挨拶にはrouteを\"navi\"にして自分で応答してください。" },
+  navi: { name: "AIナビゲーター", icon: "🧭", system: "あなたはBRAIN ITトレーニングセンター郡山のAIナビゲーターです。利用者の質問を分析し、最適なスペシャリストに振り分ける役割です。\n\n以下のスペシャリストがいます：\n- coach: 学習コーチ（勉強法、モチベーション、学習計画）\n- html: HTML専門家\n- css: CSS専門家\n- js: JavaScript専門家\n- php: PHP専門家\n- unity: Unity専門家（C#、ゲーム開発）\n- ps: Photoshop専門家\n- ai: Illustrator専門家\n- blender: Blender専門家（3Dモデリング）\n- premiere: Premiere Pro専門家（動画編集）\n\nユーザーの質問に対して、まず以下のJSON形式で振り分け先を回答してください：\n{\"route\": \"スペシャリストID\", \"reason\": \"振り分け理由（1文）\"}\n\nその後、改行して簡潔な挨拶を追加してください。一般的な雑談や挨拶にはrouteを\"navi\"にして自分で応答してください。画像が添付されている場合も、内容を見て適切なスペシャリストに振り分けてください。" },
   coach: { name: "学習コーチ", icon: "📚", system: "あなたはBRAIN ITトレーニングセンター郡山の学習コーチです。利用者のIT学習をサポートします。やさしく励ましつつ具体的なアクションを提案。「まずこれをやってみよう」という1ステップを必ず含める。専門用語は噛み砕いて説明。200字程度を目安に簡潔に。" },
-  html: { name: "HTML専門家", icon: "🌐", system: "あなたはBRAIN ITトレーニングセンター郡山のHTML専門家です。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  css: { name: "CSS専門家", icon: "🎨", system: "あなたはBRAIN ITトレーニングセンター郡山のCSS専門家です。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはBRAIN ITトレーニングセンター郡山のJavaScript専門家です。コード例を積極的に示す。モダンな書き方を推奨。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  php: { name: "PHP専門家", icon: "🐘", system: "あなたはBRAIN ITトレーニングセンター郡山のPHP専門家です。コード例を積極的に示す。セキュリティにも触れる。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはBRAIN ITトレーニングセンター郡山のUnity専門家です。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  ps: { name: "Photoshop専門家", icon: "🖼️", system: "あなたはBRAIN ITトレーニングセンター郡山のPhotoshop専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" },
-  ai: { name: "Illustrator専門家", icon: "✏️", system: "あなたはBRAIN ITトレーニングセンター郡山のIllustrator専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" },
-  blender: { name: "Blender専門家", icon: "🧊", system: "あなたはBRAIN ITトレーニングセンター郡山のBlender専門家です。操作手順をステップバイステップで。ショートカットキーを必ず併記。初心者向けの言葉で。" },
-  premiere: { name: "Premiere Pro専門家", icon: "🎬", system: "あなたはBRAIN ITトレーニングセンター郡山のPremiere Pro専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。" }
+  html: { name: "HTML専門家", icon: "🌐", system: "あなたはBRAIN ITトレーニングセンター郡山のHTML専門家です。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  css: { name: "CSS専門家", icon: "🎨", system: "あなたはBRAIN ITトレーニングセンター郡山のCSS専門家です。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはBRAIN ITトレーニングセンター郡山のJavaScript専門家です。コード例を積極的に示す。モダンな書き方を推奨。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  php: { name: "PHP専門家", icon: "🐘", system: "あなたはBRAIN ITトレーニングセンター郡山のPHP専門家です。コード例を積極的に示す。セキュリティにも触れる。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはBRAIN ITトレーニングセンター郡山のUnity専門家です。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。初心者向けの言葉で。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  ps: { name: "Photoshop専門家", icon: "🖼️", system: "あなたはBRAIN ITトレーニングセンター郡山のPhotoshop専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  ai: { name: "Illustrator専門家", icon: "✏️", system: "あなたはBRAIN ITトレーニングセンター郡山のIllustrator専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  blender: { name: "Blender専門家", icon: "🧊", system: "あなたはBRAIN ITトレーニングセンター郡山のBlender専門家です。操作手順をステップバイステップで。ショートカットキーを必ず併記。初心者向けの言葉で。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  premiere: { name: "Premiere Pro専門家", icon: "🎬", system: "あなたはBRAIN ITトレーニングセンター郡山のPremiere Pro専門家です。操作手順をステップバイステップで。ショートカットキーも併記。初心者向けの言葉で。画像が添付されている場合は、画像の内容を読み取って回答してください。" }
 };
 
 var currentTab = "navi";
 var chatHistories = {};
 var isGenerating = false;
 Object.keys(SPECIALISTS).forEach(function(id) { chatHistories[id] = []; });
+
+function handleImageSelect(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('画像サイズは5MB以下にしてください。'); event.target.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    pendingImage = { base64: e.target.result.split(',')[1], mediaType: file.type, dataUrl: e.target.result, name: file.name };
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('imagePreview').classList.add('show');
+    document.getElementById('imgBtn').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  pendingImage = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('imagePreview').classList.remove('show');
+  document.getElementById('imgBtn').classList.remove('has-image');
+}
 
 function filterTabs(cat) {
   document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -253,7 +302,8 @@ function renderChat() {
   for (var i = 0; i < history.length; i++) {
     var msg = history[i];
     if (msg.role === 'user') {
-      html += '<div class="msg user"><div class="msg-avatar">👤</div><div class="msg-body">' + escapeHtml(msg.content) + '</div></div>';
+      var imgHtml = msg.imageDataUrl ? '<img class="user-image" src="' + msg.imageDataUrl + '" alt="添付画像">' : '';
+      html += '<div class="msg user"><div class="msg-avatar">👤</div><div class="msg-body">' + escapeHtml(msg.displayText || msg.content) + imgHtml + '</div></div>';
     } else {
       var sp2 = SPECIALISTS[msg.specialist || currentTab];
       var routeHtml = msg.route ? '<div class="route-badge">→ ' + SPECIALISTS[msg.route].name + 'に転送</div>' : '';
@@ -271,17 +321,31 @@ function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(e
 async function sendMessage() {
   var input = document.getElementById('userInput');
   var text = input.value.trim();
-  if (!text || isGenerating) return;
+  if ((!text && !pendingImage) || isGenerating) return;
   isGenerating = true;
   document.getElementById('sendBtn').disabled = true;
   input.value = '';
   input.style.height = 'auto';
-  chatHistories[currentTab].push({ role: 'user', content: text });
+
+  var imageForSend = pendingImage;
+  var displayText = text || '（画像を送信）';
+
+  chatHistories[currentTab].push({
+    role: 'user',
+    content: text,
+    displayText: displayText,
+    imageDataUrl: imageForSend ? imageForSend.dataUrl : null,
+    imageBase64: imageForSend ? imageForSend.base64 : null,
+    imageMediaType: imageForSend ? imageForSend.mediaType : null
+  });
+
+  removeImage();
   renderChat();
   showTyping();
+
   try {
-    if (currentTab === 'navi') { await handleNaviRoute(text); }
-    else { await handleDirectChat(text, currentTab); }
+    if (currentTab === 'navi') { await handleNaviRoute(text, imageForSend); }
+    else { await handleDirectChat(text, currentTab, imageForSend); }
   } catch (err) {
     removeTyping();
     chatHistories[currentTab].push({ role: 'assistant', content: '⚠️ エラーが発生しました：' + err.message + '\n\nしばらくしてからもう一度試してみてください。', specialist: currentTab });
@@ -292,8 +356,18 @@ async function sendMessage() {
   document.getElementById('userInput').focus();
 }
 
-async function handleNaviRoute(text) {
-  var naviResponse = await callClaude('navi', [{ role: 'user', content: text }]);
+function buildMessageContent(text, image) {
+  var content = [];
+  if (image) {
+    content.push({ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } });
+  }
+  content.push({ type: "text", text: text || "この画像について教えてください。" });
+  return content;
+}
+
+async function handleNaviRoute(text, image) {
+  var msgContent = image ? buildMessageContent(text, image) : text;
+  var naviResponse = await callClaude('navi', [{ role: 'user', content: msgContent }]);
   removeTyping();
   var route = null;
   var cleanResponse = naviResponse;
@@ -309,10 +383,14 @@ async function handleNaviRoute(text) {
     chatHistories[currentTab].push({ role: 'assistant', content: cleanResponse || SPECIALISTS[route].name + 'につなぎますね！', specialist: 'navi', route: route });
     renderChat();
     switchTab(route);
-    chatHistories[route].push({ role: 'user', content: text });
+    chatHistories[route].push({
+      role: 'user', content: text, displayText: text || '（画像を送信）',
+      imageDataUrl: image ? image.dataUrl : null, imageBase64: image ? image.base64 : null, imageMediaType: image ? image.mediaType : null
+    });
     renderChat();
     showTyping();
-    var sr = await callClaude(route, [{ role: 'user', content: text }]);
+    var specialistContent = image ? buildMessageContent(text, image) : text;
+    var sr = await callClaude(route, [{ role: 'user', content: specialistContent }]);
     removeTyping();
     chatHistories[route].push({ role: 'assistant', content: sr, specialist: route });
     renderChat();
@@ -322,14 +400,20 @@ async function handleNaviRoute(text) {
   }
 }
 
-async function handleDirectChat(text, sid) {
+async function handleDirectChat(text, sid, image) {
   var hist = chatHistories[sid];
   var messages = [];
   var count = 0;
   for (var i = hist.length - 1; i >= 0 && count < 10; i--) {
     var m = hist[i];
     if (m.role === 'user' || (m.role === 'assistant' && m.specialist === sid)) {
-      messages.unshift({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content });
+      var msgContent;
+      if (m.role === 'user' && m.imageBase64) {
+        msgContent = buildMessageContent(m.content, { base64: m.imageBase64, mediaType: m.imageMediaType });
+      } else {
+        msgContent = m.content || '';
+      }
+      messages.unshift({ role: m.role === 'user' ? 'user' : 'assistant', content: msgContent });
       count++;
     }
   }
