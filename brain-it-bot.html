@@ -197,7 +197,7 @@ body {
     <textarea id="userInput" rows="1" placeholder="質問を入力してください..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
   </div>
-  <div class="input-hint">Enter で送信 ／ Shift+Enter で改行 ／ 📷 画像添付</div>
+  <div class="input-hint">Enter×2 で送信 ／ Enter で改行 ／ 📷 画像添付</div>
 </div>
 <script>
 var WORKER_URL = "https://brain-it-proxy.silensu0325.workers.dev";
@@ -315,7 +315,21 @@ function renderChat() {
 }
 
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+var lastEnterTime = 0;
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    var now = Date.now();
+    if (now - lastEnterTime < 500) {
+      e.preventDefault();
+      var ta = document.getElementById('userInput');
+      ta.value = ta.value.replace(/\n$/, '');
+      sendMessage();
+      lastEnterTime = 0;
+    } else {
+      lastEnterTime = now;
+    }
+  }
+}
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
 async function sendMessage() {
