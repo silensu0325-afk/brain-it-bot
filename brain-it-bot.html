@@ -335,10 +335,22 @@ function renderChat() {
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
 
 // ★ Enterキーの操作を「Enterで送信、Shift+Enterで改行」に変更 ★
+function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
+
+// ★ Enterキー2回（0.5秒以内）で送信するように変更 ★
+var lastEnterTime = 0;
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+    var now = Date.now();
+    if (now - lastEnterTime < 500) {
+      e.preventDefault();
+      var ta = document.getElementById('userInput');
+      ta.value = ta.value.replace(/\n$/, '');
+      sendMessage();
+      lastEnterTime = 0;
+    } else {
+      lastEnterTime = now;
+    }
   }
 }
 
