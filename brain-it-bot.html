@@ -140,6 +140,12 @@ body {
 }
 .image-preview .preview-remove:hover { color: #ff6b6b; }
 .route-badge { display: inline-block; background: var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin-bottom: 6px; }
+.reset-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  font-size: 11px; font-family: inherit; padding: 4px 12px; border-radius: 20px;
+  cursor: pointer; transition: all 0.2s; margin-left: auto;
+}
+.reset-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
 @media (max-width: 600px) { .header { padding: 10px 14px; } .msg { max-width: 95%; } .welcome { padding: 24px 14px; } }
 </style>
 </head>
@@ -150,6 +156,7 @@ body {
     <h1>BRAIN IT ラーニングアシスタント</h1>
     <p>学習で困ったら、まずここで聞いてみよう</p>
   </div>
+  <button class="reset-btn" onclick="resetChat()">🔄 リセット</button>
 </div>
 <div class="tab-area">
   <div class="tab-filters">
@@ -204,17 +211,17 @@ var WORKER_URL = "https://brain-it-proxy.silensu0325.workers.dev";
 var pendingImage = null;
 
 var SPECIALISTS = {
-  navi: { name: "AIナビゲーター", icon: "🧭", system: "あなたはBRAIN ITトレーニングセンター郡山のAIナビゲーターです。利用者の質問を分析し、最適なスペシャリストに振り分ける役割です。\n\n以下のスペシャリストがいます：\n- coach: 学習コーチ（勉強法、モチベーション、学習計画）\n- html: HTML専門家\n- css: CSS専門家\n- js: JavaScript専門家\n- php: PHP専門家\n- unity: Unity専門家（C#、ゲーム開発）\n- ps: Photoshop専門家\n- ai: Illustrator専門家\n- blender: Blender専門家（3Dモデリング）\n- premiere: Premiere Pro専門家（動画編集）\n\nユーザーの質問に対して、まず以下のJSON形式で振り分け先を回答してください：\n{\"route\": \"スペシャリストID\", \"reason\": \"振り分け理由（1文）\"}\n\nその後、改行して簡潔な挨拶を追加してください。一般的な雑談や挨拶にはrouteを\"navi\"にして自分で応答してください。画像が添付されている場合も、内容を見て適切なスペシャリストに振り分けてください。" },
-  coach: { name: "学習コーチ", icon: "📚", system: "あなたは学習コーチです。利用者が『自ら問いを立てる力』を養えるようサポートしてください。質問に対してすぐに答えを完結させず、『今の時点でどこまで理解できていますか？』などの逆質問を1つ含めてください。専門用語は避け、1歩だけ前に進める助言を200字以内で伝えてください。" },
-  html: { name: "HTML専門家", icon: "🌐", system: "あなたはHTML専門家です。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  css: { name: "CSS専門家", icon: "🎨", system: "あなたはCSS専門家です。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはJavaScript専門家です。コード例を積極的に示す。モダンな書き方を推奨。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  php: { name: "PHP専門家", icon: "🐘", system: "あなたはPHP専門家です。コード例を積極的に示す。セキュリティにも触れる。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはUnity専門家です。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。" },
-  ps: { name: "Photoshop専門家", icon: "🖼️", system: "あなたはPhotoshopの専門家です。初心者が迷わないよう【[イメージ] > [色調補正] > [明るさ]】のようにメニューパスを必ず明記してください。また、ツールバーの場所やショートカットキーも添えて、まず『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。" },
-  ai: { name: "Illustrator専門家", icon: "✏️", system: "あなたはIllustratorの専門家です。初心者が迷わないようメニューパスを明記し、ツールバーの場所やショートカットキーも添えて『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。" },
-  blender: { name: "Blender専門家", icon: "🧊", system: "あなたはBlenderの専門家です。初心者が迷わないよう、どのモード(オブジェクト/編集等)か明記し、ショートカットキーを必ず添えて『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。" },
-  premiere: { name: "Premiere Pro専門家", icon: "🎬", system: "あなたはPremiere Pro専門家です。初心者が迷わないよう、どのパネル(タイムライン/プロジェクト等)か明記し、ショートカットキーを必ず添えて『今すぐやるべき3ステップ』を具体的に提示してください。" }
+  navi: { name: "AIナビゲーター", icon: "🧭", system: "あなたはBRAIN ITトレーニングセンター郡山のAIナビゲーターです。必ず日本語で回答してください。利用者の質問を分析し、最適なスペシャリストに振り分ける役割です。\n\n以下のスペシャリストがいます：\n- coach: 学習コーチ（勉強法、モチベーション、学習計画）\n- html: HTML専門家\n- css: CSS専門家\n- js: JavaScript専門家\n- php: PHP専門家\n- unity: Unity専門家（C#、ゲーム開発）\n- ps: Photoshop専門家\n- ai: Illustrator専門家\n- blender: Blender専門家（3Dモデリング）\n- premiere: Premiere Pro専門家（動画編集）\n\nユーザーの質問に対して、まず以下のJSON形式で振り分け先を回答してください：\n{\"route\": \"スペシャリストID\", \"reason\": \"振り分け理由（1文）\"}\n\nその後、改行して簡潔な挨拶を追加してください。一般的な雑談や挨拶にはrouteを\"navi\"にして自分で応答してください。画像が添付されている場合も、内容を見て適切なスペシャリストに振り分けてください。" },
+  coach: { name: "学習コーチ", icon: "📚", system: "あなたは学習コーチです。必ず日本語で回答してください。利用者が『自ら問いを立てる力』を養えるようサポートしてください。質問に対してすぐに答えを完結させず、『今の時点でどこまで理解できていますか？』などの逆質問を1つ含めてください。専門用語は避け、1歩だけ前に進める助言を200字以内で伝えてください。" },
+  html: { name: "HTML専門家", icon: "🌐", system: "あなたはHTML専門家です。必ず日本語で回答してください。コード例を積極的に示す。なぜそう書くのかも簡潔に説明。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  css: { name: "CSS専門家", icon: "🎨", system: "あなたはCSS専門家です。必ず日本語で回答してください。コード例を積極的に示す。Flexbox、Gridなどモダンな手法を優先。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  js: { name: "JavaScript専門家", icon: "⚡", system: "あなたはJavaScript専門家です。必ず日本語で回答してください。コード例を積極的に示す。モダンな書き方を推奨。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  php: { name: "PHP専門家", icon: "🐘", system: "あなたはPHP専門家です。必ず日本語で回答してください。コード例を積極的に示す。セキュリティにも触れる。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  unity: { name: "Unity専門家", icon: "🎮", system: "あなたはUnity専門家です。必ず日本語で回答してください。C#のコード例を積極的に示す。Unityエディタの操作手順も説明。コード例は必ずバッククォート3つで囲んだコードブロックとして記述してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  ps: { name: "Photoshop専門家", icon: "🖼️", system: "あなたはPhotoshopの専門家です。必ず日本語で回答してください。初心者が迷わないよう【[イメージ] > [色調補正] > [明るさ]】のようにメニューパスを必ず明記してください。また、ツールバーの場所やショートカットキーも添えて、まず『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  ai: { name: "Illustrator専門家", icon: "✏️", system: "あなたはIllustratorの専門家です。必ず日本語で回答してください。初心者が迷わないようメニューパスを明記し、ツールバーの場所やショートカットキーも添えて『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  blender: { name: "Blender専門家", icon: "🧊", system: "あなたはBlenderの専門家です。必ず日本語で回答してください。初心者が迷わないよう、どのモード(オブジェクト/編集等)か明記し、ショートカットキーを必ず添えて『今すぐやるべき3ステップ』を具体的に提示してください。最後に『ここまでで画面に変化はありましたか？』と聞いてください。画像が添付されている場合は、画像の内容を読み取って回答してください。" },
+  premiere: { name: "Premiere Pro専門家", icon: "🎬", system: "あなたはPremiere Pro専門家です。必ず日本語で回答してください。初心者が迷わないよう、どのパネル(タイムライン/プロジェクト等)か明記し、ショートカットキーを必ず添えて『今すぐやるべき3ステップ』を具体的に提示してください。画像が添付されている場合は、画像の内容を読み取って回答してください。" }
 };
 
 var currentTab = "navi";
@@ -222,22 +229,43 @@ var chatHistories = {};
 var isGenerating = false;
 Object.keys(SPECIALISTS).forEach(function(id) { chatHistories[id] = []; });
 
-// ★ 履歴の保存と読み込み機能 ★
+// ★ 履歴の保存と読み込み（画像データは除外してサイズ爆発を防ぐ）★
 function saveHistory() {
-  localStorage.setItem('brain_it_history', JSON.stringify(chatHistories));
+  try {
+    var toSave = {};
+    Object.keys(chatHistories).forEach(function(id) {
+      toSave[id] = chatHistories[id].map(function(msg) {
+        return {
+          role: msg.role,
+          content: msg.content,
+          displayText: msg.displayText,
+          specialist: msg.specialist,
+          route: msg.route
+          // imageDataUrl, imageBase64, imageMediaType は保存しない
+        };
+      });
+    });
+    localStorage.setItem('brain_it_history', JSON.stringify(toSave));
+  } catch(e) {
+    console.warn('履歴の保存に失敗:', e.message);
+  }
 }
+
 function loadHistory() {
-  var saved = localStorage.getItem('brain_it_history');
-  if (saved) {
-    try {
+  try {
+    var saved = localStorage.getItem('brain_it_history');
+    if (saved) {
       var parsed = JSON.parse(saved);
       Object.keys(SPECIALISTS).forEach(function(id) {
         if (parsed[id]) chatHistories[id] = parsed[id];
       });
       renderChat();
-    } catch(e) {}
+    }
+  } catch(e) {
+    console.warn('履歴の読み込みに失敗:', e.message);
   }
 }
+
 window.addEventListener('load', loadHistory);
 
 function handleImageSelect(event) {
@@ -251,6 +279,7 @@ function handleImageSelect(event) {
     document.getElementById('previewName').textContent = file.name;
     document.getElementById('imagePreview').classList.add('show');
     document.getElementById('imgBtn').classList.add('has-image');
+    document.getElementById('userInput').placeholder = '画像について質問を入力（空でもOK）';
   };
   reader.readAsDataURL(file);
 }
@@ -260,6 +289,21 @@ function removeImage() {
   document.getElementById('fileInput').value = '';
   document.getElementById('imagePreview').classList.remove('show');
   document.getElementById('imgBtn').classList.remove('has-image');
+  document.getElementById('userInput').placeholder = '質問を入力してください...';
+}
+
+function resetChat() {
+  if (!confirm('会話をリセットしますか？')) return;
+  Object.keys(SPECIALISTS).forEach(function(id) { chatHistories[id] = []; });
+  localStorage.removeItem('brain_it_history');
+  currentTab = 'navi';
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.tab-btn[data-id="navi"]').classList.add('active');
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.style.display = ''; });
+  removeImage();
+  renderChat();
 }
 
 function filterTabs(cat) {
@@ -334,10 +378,6 @@ function renderChat() {
 
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
 
-// ★ Enterキーの操作を「Enterで送信、Shift+Enterで改行」に変更 ★
-function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
-
-// ★ Enterキー2回（0.5秒以内）で送信するように変更 ★
 var lastEnterTime = 0;
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -360,7 +400,7 @@ async function sendMessage() {
   var input = document.getElementById('userInput');
   var text = input.value.trim();
   if ((!text && !pendingImage) || isGenerating) return;
-  
+
   isGenerating = true;
   document.getElementById('sendBtn').disabled = true;
   input.value = '';
@@ -368,8 +408,7 @@ async function sendMessage() {
 
   var imageForSend = pendingImage;
   var displayText = text || '（画像を送信）';
-  
-  // ★ ハイブリッド判定: 画像があればGemini、なければClaude
+
   var modelType = imageForSend ? 'gemini' : 'claude';
 
   chatHistories[currentTab].push({
@@ -383,20 +422,22 @@ async function sendMessage() {
 
   removeImage();
   renderChat();
-  saveHistory(); // ★送信直後に保存
+  saveHistory();
   showTyping();
 
   try {
-    if (currentTab === 'navi') { 
-        await handleNaviRoute(text, imageForSend, modelType); 
-    } else { 
-        await handleDirectChat(text, currentTab, imageForSend, modelType); 
+    if (currentTab === 'navi') {
+      await handleNaviRoute(text, imageForSend, modelType);
+    } else {
+      await handleDirectChat(text, currentTab, imageForSend, modelType);
     }
-    saveHistory(); // ★AIの返答後にも保存
+    saveHistory();
   } catch (err) {
     removeTyping();
-    chatHistories[currentTab].push({ role: 'assistant', content: '⚠️ エラーが発生しました：' + err.message + '\n\nしばらくしてからもう一度試してみてください。', specialist: currentTab });
+    chatHistories[currentTab].push({ role: 'assistant', content: '⚠️ うまく接続できませんでした。\n\nもう一度試してみてください。それでもうまくいかない場合は、スタッフに声をかけてください。', specialist: currentTab });
+    console.error('Bot error:', err.message);
     renderChat();
+    saveHistory();
   }
   isGenerating = false;
   document.getElementById('sendBtn').disabled = false;
@@ -412,7 +453,6 @@ function buildMessageContent(text, image) {
   return content;
 }
 
-// 引数に modelType を追加
 async function handleNaviRoute(text, image, modelType) {
   var msgContent = image ? buildMessageContent(text, image) : text;
   var naviResponse = await callAI('navi', [{ role: 'user', content: msgContent }], modelType);
@@ -448,7 +488,6 @@ async function handleNaviRoute(text, image, modelType) {
   }
 }
 
-// 引数に modelType を追加
 async function handleDirectChat(text, sid, image, modelType) {
   var hist = chatHistories[sid];
   var messages = [];
@@ -472,16 +511,15 @@ async function handleDirectChat(text, sid, image, modelType) {
   renderChat();
 }
 
-// ★ callClaude を callAI に変更し、model を送信データに含める ★
 async function callAI(sid, messages, modelType) {
   var sp = SPECIALISTS[sid];
   var res = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-        system: sp.system, 
-        messages: messages,
-        model: modelType // 'gemini' か 'claude' が入る
+    body: JSON.stringify({
+      system: sp.system,
+      messages: messages,
+      model: modelType
     })
   });
   if (!res.ok) {
@@ -508,37 +546,33 @@ function showTyping() {
 function removeTyping() {
   var el = document.getElementById('typingMsg');
   if (el) el.remove();
-}// ★ 追加：クリップボードからの画像貼り付け（Ctrl+V）に対応 ★
+}
+
+// ★ クリップボードからの画像貼り付け（Ctrl+V）対応 ★
 document.getElementById('userInput').addEventListener('paste', function(e) {
   var clipboardData = e.clipboardData || window.clipboardData;
   if (!clipboardData) return;
-
   var items = clipboardData.items;
   for (var i = 0; i < items.length; i++) {
-    // 貼り付けられたデータの中に「画像」が含まれているかチェック
     if (items[i].type.indexOf('image') !== -1) {
       var file = items[i].getAsFile();
       var reader = new FileReader();
-      
       reader.onload = function(e_read) {
-        // 今まで「📷ボタン」でやっていたのと同じ処理を自動で行う
-        pendingImage = { 
-          base64: e_read.target.result.split(',')[1], 
-          mediaType: file.type, 
-          dataUrl: e_read.target.result, 
-          name: "貼り付けた画像.png" 
+        pendingImage = {
+          base64: e_read.target.result.split(',')[1],
+          mediaType: file.type,
+          dataUrl: e_read.target.result,
+          name: "貼り付けた画像.png"
         };
-        
-        // 画面に画像のプレビューを表示する
         document.getElementById('previewImg').src = e_read.target.result;
         document.getElementById('previewName').textContent = "貼り付けた画像";
         document.getElementById('imagePreview').classList.add('show');
         document.getElementById('imgBtn').classList.add('has-image');
+        document.getElementById('userInput').placeholder = '画像について質問を入力（空でもOK）';
       };
-      
       reader.readAsDataURL(file);
-      e.preventDefault(); // 画像の文字化けデータがテキストエリアに入るのを防ぐ
-      break; 
+      e.preventDefault();
+      break;
     }
   }
 });
