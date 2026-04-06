@@ -149,6 +149,39 @@ body {
 }
 .reset-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
 @media (max-width: 600px) { .header { padding: 10px 14px; } .msg { max-width: 95%; } .welcome { padding: 24px 14px; } }
+  /* =========================================
+   プログラムのコードを見やすくするデザイン
+   ========================================= */
+
+/* ① 複数行のコードブロック（黒板みたいな部分） */
+pre {
+  background-color: #1e1e1e !important; /* 落ち着いたダークグレー */
+  color: #d4d4d4 !important; /* 目に優しいオフホワイト */
+  padding: 15px;
+  border-radius: 8px; /* 角を少し丸く */
+  overflow-x: auto; /* 横に長いコードはスクロールできるように */
+  font-family: Consolas, "Courier New", monospace; /* プログラミング用フォント */
+  line-height: 1.5;
+  margin: 10px 0;
+  border: 1px solid #333; /* うっすら枠線 */
+}
+
+/* コードブロックの中の文字色を強制的に引き継ぐ */
+pre code {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* ② 文章の中に出てくる短いコード（インラインコード） */
+/* ※「ここをクリックしてね」の「ここ」みたいな部分 */
+code {
+  background-color: #f3f4f6; /* 薄いグレー背景 */
+  color: #2563eb; /* スッキリした青色（赤から変更！） */
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.9em;
+}
 </style>
 </head>
 <body>
