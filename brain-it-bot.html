@@ -508,7 +508,40 @@ function showTyping() {
 function removeTyping() {
   var el = document.getElementById('typingMsg');
   if (el) el.remove();
-}
+}// ★ 追加：クリップボードからの画像貼り付け（Ctrl+V）に対応 ★
+document.getElementById('userInput').addEventListener('paste', function(e) {
+  var clipboardData = e.clipboardData || window.clipboardData;
+  if (!clipboardData) return;
+
+  var items = clipboardData.items;
+  for (var i = 0; i < items.length; i++) {
+    // 貼り付けられたデータの中に「画像」が含まれているかチェック
+    if (items[i].type.indexOf('image') !== -1) {
+      var file = items[i].getAsFile();
+      var reader = new FileReader();
+      
+      reader.onload = function(e_read) {
+        // 今まで「📷ボタン」でやっていたのと同じ処理を自動で行う
+        pendingImage = { 
+          base64: e_read.target.result.split(',')[1], 
+          mediaType: file.type, 
+          dataUrl: e_read.target.result, 
+          name: "貼り付けた画像.png" 
+        };
+        
+        // 画面に画像のプレビューを表示する
+        document.getElementById('previewImg').src = e_read.target.result;
+        document.getElementById('previewName').textContent = "貼り付けた画像";
+        document.getElementById('imagePreview').classList.add('show');
+        document.getElementById('imgBtn').classList.add('has-image');
+      };
+      
+      reader.readAsDataURL(file);
+      e.preventDefault(); // 画像の文字化けデータがテキストエリアに入るのを防ぐ
+      break; 
+    }
+  }
+});
 </script>
 </body>
 </html>
