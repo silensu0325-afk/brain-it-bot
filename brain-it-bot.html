@@ -374,6 +374,7 @@ function formatMessage(t) {
     inlineCodes.push('<code>' + escaped + '</code>');
     return '%%INLINE' + (inlineCodes.length - 1) + '%%';
   });
+  t = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   t = t.replace(/\n/g, '<br>');
   codeBlocks.forEach(function(block, i) { t = t.replace('%%CODEBLOCK' + i + '%%', block); });
@@ -413,19 +414,10 @@ function renderChat() {
 
 function sendQuick(t) { document.getElementById('userInput').value = t; sendMessage(); }
 
-var lastEnterTime = 0;
 function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    var now = Date.now();
-    if (now - lastEnterTime < 500) {
-      e.preventDefault();
-      var ta = document.getElementById('userInput');
-      ta.value = ta.value.replace(/\n$/, '');
-      sendMessage();
-      lastEnterTime = 0;
-    } else {
-      lastEnterTime = now;
-    }
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    sendMessage();
   }
 }
 
